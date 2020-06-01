@@ -1,4 +1,4 @@
-# miaosha
+# 笔记
 ***1、项目一开始时报错的地方:***
 
 ![alt](https://github.com/Microvolume/miaosha/blob/master/src/main/resources/static/image/%E6%88%AA%E5%9B%BE0.png?raw=true)  
