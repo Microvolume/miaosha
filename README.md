@@ -88,7 +88,8 @@ public synchronized int kill(Integer id) {
 
 ***3、如何解决接口限流***  
     *常用的限流算法有`令牌桶`和和`漏桶(漏斗算法)`，而Google开源项目Guava中的RateLimiter使用的就是令牌桶控制算法。*
-
+![alt](https://github.com/Microvolume/miaosha/blob/master/src/main/resources/static/image/%E6%BC%8F%E6%96%97%E7%AE%97%E6%B3%95.jpeg?raw=true)![alt](https://github.com/Microvolume/miaosha/blob/master/src/main/resources/static/image/%E4%BB%A4%E7%89%8C%E6%A1%B6%E7%AE%97%E6%B3%95.jpeg?raw=true)
+    
 *用乐观锁的方式，在controller层上，秒杀业务逻辑前面加上令牌桶进行限流*  
 
 ```java
