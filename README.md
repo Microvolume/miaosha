@@ -1,5 +1,5 @@
 # 笔记  
-                                                    `解决秒杀系统超卖问题`  
+                                                     **解决秒杀系统超卖问题**  
                                             =========================================  
 ***1、项目一开始时报错的地方:***  
 ![alt](https://github.com/Microvolume/miaosha/blob/master/src/main/resources/static/image/%E6%88%AA%E5%9B%BE0.png?raw=true)  
@@ -35,10 +35,7 @@
         }
     }
 ```  
-   *这里有个细节需要注意，不要把 synchronized 代码块直接写到业务层方法上，如果业务层上还有@Transactional 的话，
-仍然会出现超卖的情况，原因就是@Transactional 的作用域比 synchronized 关键字要大，若一个线程在执行完synchronized之后，
-@Transactional 却没提交，而这时又有一个线程进来继续执行，变会出现多个线程一起提交的情况；解决的办法是 synchronized 
-写在业务方法的调用处。*  
+   *这里有个细节需要注意，不要把 synchronized 代码块直接写到业务层方法上，如果业务层上还有@Transactional 的话，仍然会出现超卖的情况，原因就是@Transactional 的作用域比 synchronized 关键字要大，若一个线程在执行完synchronized之后，@Transactional 却没提交，而这时又有一个线程进来继续执行，变会出现多个线程一起提交的情况；解决的办法是 synchronized 写在业务方法的调用处。*  
 ```java
 @Override
 public synchronized int kill(Integer id) {
@@ -58,7 +55,9 @@ public synchronized int kill(Integer id) {
 ![alt](https://github.com/Microvolume/miaosha/blob/master/src/main/resources/static/image/%E6%88%AA%E5%9B%BE%20(7).png?raw=true) 
 ![alt](https://github.com/Microvolume/miaosha/blob/master/src/main/resources/static/image/%E6%88%AA%E5%9B%BE%20(8).png?raw=true)  
 
-***5、用乐观锁，版本号的方式解决秒杀业务中商品超卖的问题***
+***5、用乐观锁，版本号的方式解决秒杀业务中商品超卖的问题***  
+*乐观锁的思想：使用乐观锁解决商品的超卖问题,实际上是把主要防止超卖问题交给数据库解决,利用数据库中定义的`version字段`以及数据库中的`事务`实现在并发情况下商品的超卖问题。*  
+*（1）更新库存方法改造*  
 ```xml
 <!--根据商品id扣除库存-->
 <update id="updateSale" parameterType="Stock">
@@ -71,7 +70,7 @@ public synchronized int kill(Integer id) {
         version = #{version}
 </update>
 ```  
-*用Jmeter进行压力测试，2000并发请求，该方式的时间花费是34s*
+*（2）用Jmeter进行压力测试，2000并发请求，该方式的时间花费是34s*  
 ![alt](https://github.com/Microvolume/miaosha/blob/master/src/main/resources/static/image/%E6%88%AA%E5%9B%BE%20(9).png?raw=true) 
 
 ***总结：解决商品超卖有两种解决方案，一种就是用synchronized 悲观锁这种方式，让请求一直阻塞等待这种方式；另一种是用数据库中乐观锁这种方式，
@@ -79,8 +78,38 @@ public synchronized int kill(Integer id) {
 
 
 
-                                                      `解决秒杀系统限流问题`  
+                                                      **解决秒杀系统限流问题**  
                                             =========================================  
- 
+***1、什么是接口限流***  
+    *`限流:是对某一时间窗口内的请求数进行限制，保持系统的可用性和稳定性，防止因流量暴增而导致的系统运行缓慢或宕机`*
+
+***2、为什么要做接口限流***  
+    *在面临高并发的抢购请求时，我们如果不对接口进行限流，可能会对后台系统造成极大的压力。大量的请求抢购成功时需要调用下单的接口，过多的请求打到数据库会对系统的稳定性造成影响。*
+
+***3、如何解决接口限流***  
+    *常用的限流算法有`令牌桶`和和`漏桶(漏斗算法)`，而Google开源项目Guava中的RateLimiter使用的就是令牌桶控制算法。*
+
+*用乐观锁的方式，在controller层上，秒杀业务逻辑前面加上令牌桶进行限流*  
+
+```java
+    @GetMapping("killtoken")
+    public String killtoken(Integer id){
+        System.out.println("秒杀商品的id = " + id);
+        //加入令牌桶的限流措施
+        if(!rateLimiter.tryAcquire(3, TimeUnit.SECONDS)){
+            log.info("抛弃请求: 抢购失败,当前秒杀活动过于火爆,请重试");
+            return "抢购失败,当前秒杀活动过于火爆,请重试!";
+        }
+        try {
+            //根据秒杀商品id 去调用秒杀业务
+            int orderId = orderService.kill(id);
+            return "秒杀成功,订单id为: " + String.valueOf(orderId);
+        }catch (Exception e){
+            e.printStackTrace();
+            return e.getMessage();
+        }
+    }
+```
+                                     
 
 
